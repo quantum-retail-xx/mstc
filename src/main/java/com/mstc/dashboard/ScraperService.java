@@ -65,7 +65,13 @@ public class ScraperService {
                         // Span ID: lastbidXXXXXXX [cite: 1184, 1197]
                         String lastBidVal = driver.findElement(By.id("lastbid" + refId)).getText().trim();
 
-                        activeLots.add(new AuctionLot(lotNo, lastBidVal, basePriceVal, qtyVal,refId));
+                        // Check if sold
+                        String rowClass = row.getAttribute("class");
+                        boolean isSold = rowClass != null && rowClass.contains("soldbid");
+
+                        System.out.println("Lot " + lotNo + " rowClass: " + rowClass + " isSold: " + isSold);
+
+                        activeLots.add(new AuctionLot(lotNo, lastBidVal, basePriceVal, qtyVal,refId, isSold));
                     }
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
