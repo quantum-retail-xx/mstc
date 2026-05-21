@@ -19,7 +19,15 @@ public class AuctionLot {
     private static final ConcurrentHashMap<String, ConcurrentHashMap<String, Instant>> lotToBiddersMap = new ConcurrentHashMap<>();
     private final IntegerProperty activeCount = new SimpleIntegerProperty(0);
 
-    public AuctionLot(String lotNo, String lastBidStr, String basePriceStr, String qtyStr, String itemRefId) {
+    // New properties for tracking auto bid detection
+    private final StringProperty currentHighBidder;
+    private final DoubleProperty previousPrice;
+    private final StringProperty previousHighBidder;
+    private final BooleanProperty isAutoBid;
+    private final BooleanProperty isMeH1;
+    private final BooleanProperty isSold;
+
+    public AuctionLot(String lotNo, String lastBidStr, String basePriceStr, String qtyStr, String itemRefId, boolean isSold) {
         this.lotNo = new SimpleStringProperty(lotNo);
         this.itemRefId = itemRefId;
 
@@ -36,6 +44,14 @@ public class AuctionLot {
 
         // Row-level CFT calculation: (Price * 1.354) / 35.315
         this.cftPrice = new SimpleDoubleProperty(price > 0 ? (price * 1.354) / 35.315 : 0.0);
+
+        // Initialize new properties
+        this.currentHighBidder = new SimpleStringProperty("");
+        this.previousPrice = new SimpleDoubleProperty(0.0);
+        this.previousHighBidder = new SimpleStringProperty("");
+        this.isAutoBid = new SimpleBooleanProperty(false);
+        this.isMeH1 = new SimpleBooleanProperty(false);
+        this.isSold = new SimpleBooleanProperty(isSold);
     }
 
     private double parseSafe(String val) {
@@ -53,6 +69,14 @@ public class AuctionLot {
     public DoubleProperty cftPriceProperty() { return cftPrice; }
     public BooleanProperty isNoBidProperty() { return isNoBid; }
     public IntegerProperty activeCountProperty() { return activeCount; }
+
+    // New getters for the added properties
+    public StringProperty currentHighBidderProperty() { return currentHighBidder; }
+    public DoubleProperty previousPriceProperty() { return previousPrice; }
+    public StringProperty previousHighBidderProperty() { return previousHighBidder; }
+    public BooleanProperty isAutoBidProperty() { return isAutoBid; }
+    public BooleanProperty isMeH1Property() { return isMeH1; }
+    public BooleanProperty isSoldProperty() { return isSold; }
 
     public void updateBidderActivity(String lotNo, String bidderId) {
         if(bidderId.equals("90633")){
