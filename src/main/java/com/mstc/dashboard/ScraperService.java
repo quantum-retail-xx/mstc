@@ -107,7 +107,7 @@ public class ScraperService {
 
         String currentH1 = getHighBidderId(driver,  row.getAttribute("id").replace("tabrow", "")); // Ensure AuctionLot stores refId
         if (currentH1 != null && !currentH1.equals("90633") && !currentH1.equals("null")) {
-          
+
             globalUniqueBidders.add(currentH1);
         }
     }
