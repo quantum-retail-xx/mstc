@@ -9,9 +9,11 @@ import java.util.*;
 public class ScraperService {
     private Set<String> interestedLots;
     public static final int TARGET_ROW = 2;
+    private final YamlConfig config;
 
-    public ScraperService(String filePath) throws Exception {
+    public ScraperService(String filePath, YamlConfig config) throws Exception {
         this.interestedLots = new HashSet<>(Files.readAllLines(Paths.get(filePath)));
+        this.config = config;
     }
 
     /**
@@ -52,7 +54,19 @@ public class ScraperService {
                     String rawLotText = row.findElement(By.xpath("./td[1]")).getText().trim();
                     String lotNo = rawLotText.split("\\s+")[0];
                     lotNo=lotNo.replace(".0","");
-                   updateGlobalUniqueBidders(driver,lotNo,globalUniqueBidders,row);
+
+                    // Extract species and type values from columns (adjust indices if your HTML differs)
+                    String speciesVal = "";
+                    try {
+                        speciesVal = row.findElement(By.xpath("./td[3]")).getText().trim();
+                    } catch (Exception e) { speciesVal = ""; }
+
+                    String typeVal = "";
+                    try {
+                        typeVal = row.findElement(By.xpath("./td[4]")).getText().trim();
+                    } catch (Exception e) { typeVal = ""; }
+
+                   updateGlobalUniqueBidders(driver, lotNo, globalUniqueBidders, row, speciesVal, typeVal);
                     if (interestedLots.contains(lotNo)) {
                         String refId = row.getAttribute("id").replace("tabrow", "");
 
@@ -81,10 +95,19 @@ public class ScraperService {
         return activeLots;
     }
 
-    private void updateGlobalUniqueBidders(WebDriver driver, String lotNo, Set<String> globalUniqueBidders,WebElement row) {
+    private void updateGlobalUniqueBidders(WebDriver driver, String lotNo, Set<String> globalUniqueBidders, WebElement row, String speciesVal, String typeVal) {
+
+        // If config exists, only count unique bidders for lots that match species/type
+        if (this.config != null) {
+            boolean match = this.config.isSpeciesAndTypeMatch(speciesVal, typeVal);
+            if (!match) {
+                return;
+            }
+        }
 
         String currentH1 = getHighBidderId(driver,  row.getAttribute("id").replace("tabrow", "")); // Ensure AuctionLot stores refId
         if (currentH1 != null && !currentH1.equals("90633") && !currentH1.equals("null")) {
+          
             globalUniqueBidders.add(currentH1);
         }
     }
