@@ -24,7 +24,7 @@ public class MainApp extends Application {
     private TableView<AuctionLot> table = new TableView<>();
     private Label avgLabel = new Label("Weighted Average: 0.00");
     private ObservableList<AuctionLot> dataList = FXCollections.observableArrayList();
-    private Label uniqueBiddersLabel = new Label("Global Unique Bidders ");
+    private Label uniqueBiddersLabel = new Label("Species Specific Bidders ");
 
     // Map to store previous data for auto bid detection
     private Map<String, PreviousData> previousMap = new HashMap<>();
@@ -42,8 +42,20 @@ public class MainApp extends Application {
     public void start(Stage stage) throws Exception {
         setupColumns();
 
+        // Load YAML config (optional) from config/application.yaml
+        java.nio.file.Path yamlPath = java.nio.file.Paths.get("config", "application.yaml");
+        YamlConfig config = null;
+        try {
+            config = new YamlConfig(yamlPath);
+            System.out.println("Loaded species config: " + config.getSpeciesList().size() + " entries.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            // continue without config if file not present or parse fails
+            System.out.println("Species config not loaded, continuing without config.");
+        }
+
         ChromeDriver driver = new ChromeDriver();
-        ScraperService scraper = new ScraperService("interested_lots.txt");
+        ScraperService scraper = new ScraperService("interested_lots.txt", config);
         driver.get("https://www.mstcecommerce.com/auctionhome/kafd/index.jsp");
 
         Thread worker = new Thread(() -> {
@@ -109,7 +121,7 @@ public class MainApp extends Application {
                     dataList.setAll(results);
                     table.refresh();
                     avgLabel.setText(String.format("Weighted Avg (Sum Bid / Sum Qty * 35.315): %.2f", weightedAvg));
-                    uniqueBiddersLabel.setText("Global Unique Bidders (Excl. Me): " + globalUniqueBidders.size());
+                    uniqueBiddersLabel.setText("Species Specific Bidders (Excl. Me): " + globalUniqueBidders.size());
                 });
 
                 try {
