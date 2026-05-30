@@ -11,8 +11,15 @@ public class ScraperService {
     public static final int TARGET_ROW = 2;
     private final YamlConfig config;
 
+    // Backward-compatible constructor (text file)
     public ScraperService(String filePath, YamlConfig config) throws Exception {
         this.interestedLots = new HashSet<>(Files.readAllLines(Paths.get(filePath)));
+        this.config = config;
+    }
+
+    // New constructor to accept a pre-built set of lot numbers (e.g. read from Excel)
+    public ScraperService(Set<String> interestedLots, YamlConfig config) {
+        this.interestedLots = new HashSet<>(interestedLots);
         this.config = config;
     }
 

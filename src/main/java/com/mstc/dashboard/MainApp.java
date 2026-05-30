@@ -42,27 +42,18 @@ public class MainApp extends Application {
     public void start(Stage stage) throws Exception {
         setupColumns();
 
-        // Load YAML config (optional) from config/application.yaml
-        java.nio.file.Path yamlPath = java.nio.file.Paths.get("config", "application.yaml");
-        YamlConfig config = null;
-        try {
-            config = new YamlConfig(yamlPath);
-            System.out.println("Loaded species config: " + config.getSpeciesList().size() + " entries.");
-        } catch (Exception e) {
-            e.printStackTrace();
-            // continue without config if file not present or parse fails
-            System.out.println("Species config not loaded, continuing without config.");
-        }
+        YamlConfig config= loadConfigFile();
 
         ChromeDriver driver = new ChromeDriver();
-        ScraperService scraper = new ScraperService("interested_lots.txt", config);
+        ScraperService finalScraper = loadLotsFileAndCreateScraperService(config);
         driver.get("https://www.mstcecommerce.com/auctionhome/kafd/index.jsp");
 
+
         Thread worker = new Thread(() -> {
-            scraper.enterAuctionFloor(driver);
+            finalScraper.enterAuctionFloor(driver);
             Set<String> globalUniqueBidders = new HashSet<>();
             while (true) {
-                List<AuctionLot> results = scraper.getFilteredLots(driver, globalUniqueBidders);
+                List<AuctionLot> results = finalScraper.getFilteredLots(driver, globalUniqueBidders);
 
                 final String MY_ID = "90633"; // Your ID from HTML
                 // --- WEIGHTED AVERAGE CALCULATION ---
@@ -72,7 +63,7 @@ public class MainApp extends Application {
 
                 for (AuctionLot lot : results) {
                     String lotNo = lot.lotNoProperty().get();
-                    String currentH1 = scraper.getHighBidderId(driver, lot.getItemRefId());
+                    String currentH1 = finalScraper.getHighBidderId(driver, lot.getItemRefId());
                     if (currentH1 != null && !currentH1.equals("null")) {
                         lot.currentHighBidderProperty().set(currentH1);
                         lot.isMeH1Property().set(currentH1.equals(MY_ID));
@@ -137,6 +128,44 @@ public class MainApp extends Application {
         stage.setScene(new Scene(new VBox(10, table, avgLabel,uniqueBiddersLabel), 850, 600));
         stage.setTitle("MSTC Auction Monitor");
         stage.show();
+    }
+
+    private ScraperService loadLotsFileAndCreateScraperService(YamlConfig config) throws Exception {
+
+        // Prefer Excel file 'interested_lots.xlsx' in project root; fallback to text file
+        ScraperService scraper;
+        java.nio.file.Path excelPath = java.nio.file.Paths.get("interested_lots.xlsx");
+        try {
+            if (java.nio.file.Files.exists(excelPath)) {
+                ExcelLotReader reader = new ExcelLotReader(excelPath);
+                java.util.Set<String> lots = reader.readLotNumbers();
+                System.out.println("Loaded " + lots.size() + " lots from Excel.");
+                scraper = new ScraperService(lots, config);
+            } else {
+                scraper = new ScraperService("interested_lots.txt", config);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // fallback to text file if Excel read fails
+            scraper = new ScraperService("interested_lots.txt", config);
+        }
+        return scraper;
+    }
+
+    private YamlConfig loadConfigFile() {
+
+        // Load YAML config (optional) from config/application.yaml
+        java.nio.file.Path yamlPath = java.nio.file.Paths.get("config", "application.yaml");
+        YamlConfig config = null;
+        try {
+            config = new YamlConfig(yamlPath);
+            System.out.println("Loaded species config: " + config.getSpeciesList().size() + " entries.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            // continue without config if file not present or parse fails
+            System.out.println("Species config not loaded, continuing without config.");
+        }
+        return config;
     }
 
     public void  refreshAuctionPage(ChromeDriver driver) {

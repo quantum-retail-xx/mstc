@@ -2,6 +2,6 @@
 # Define species and types. Unique bidders are counted only when both species and type match.
 
 species:
-  - name: "Acacia"
+  - name: "Mathi"
     types: ["Timber"]
 
